@@ -1,0 +1,42 @@
+class Solution:
+    def cutOffTree(self, forest: List[List[int]]) -> int:
+        #Lees Algorithm Implementation for Maze Routing
+        sizes = []
+        for i in range(0, len(forest)):
+            for j in range(0, len(forest[0])):
+                if forest[i][j] != 1 and forest[i][j] != 0:
+                    sizes.append(forest[i][j])
+        sizes.sort()
+        current = (0,0,0)
+        q = deque([current])
+        steps = 0
+        seen = {}
+        for dest in sizes:            
+            while forest[current[0]][current[1]] != dest: 
+                current = q.pop()
+                seen[(current[0], current[1])] = True
+                i, j, level = current
+                #place possible paths in que
+                if i != 0:
+                    if forest[i-1][j] != 0 and (i-1, j) not in seen.keys():
+                        q.appendleft((i-1, j, level+1))
+                if i != len(forest)-1:
+                    if forest[i+1][j] != 0 and (i+1, j) not in seen.keys():
+                        q.appendleft((i+1, j, level+1))
+                if j != 0:
+                    if forest[i][j-1] != 0 and (i, j-1) not in seen.keys():
+                        q.appendleft((i, j-1, level+1))
+                if j != len(forest[0])-1:
+                    if forest[i][j+1] != 0 and (i, j+1) not in seen.keys():
+                        q.appendleft((i, j+1, level+1))
+                                       
+                #no more paths left
+                if not q and forest[current[0]][current[1]] != dest:
+                    return -1
+            
+            steps+=current[2]
+            q.clear()
+            seen.clear()
+            current = (current[0], current[1], 0)
+            q.appendleft(current)
+        return steps
