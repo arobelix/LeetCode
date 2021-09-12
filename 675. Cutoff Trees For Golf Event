@@ -1,4 +1,66 @@
-class Solution:
+#######################################
+Haddocks Algorithm Implementation
+#######################################
+    def cutOffTree(self, forest: List[List[int]]) -> int:
+        
+        sizes = []
+        #get manhattan distance between two points
+        mdistance = lambda x, y: abs(x[0]-y[0]) + abs(x[1]-y[1])
+        
+        #get positions of consecutive destinations 
+        sizes = [(forest[i][j], i, j) for i in range(0, len(forest)) for j in range(0, len(forest[0])) if forest[i][j] != 0 and forest[i][j] != 1]
+        sizes.sort()
+        
+        current, heap, steps, seen = (0,0,0), [], 0, {}
+        for val in sizes:
+            #for each destination calculate manhattan distance and detour steps
+            _, dest_i, dest_j = val  
+            steps += mdistance((current[1], current[2]), (dest_i, dest_j)) 
+            seen = {}
+            while current[1] != dest_i or current[2] != dest_j:
+                #add new positions to heap. If position is closer to dest its priority is higher
+                level, cur_i, cur_j = current
+                cur_mdist = mdistance((cur_i, cur_j), (dest_i, dest_j))
+                seen[cur_i, cur_j] = 0
+                #up, down, left, right
+                for i, j in (cur_i-1, cur_j), (cur_i+1, cur_j), (cur_i, cur_j-1), (cur_i, cur_j+1):
+                    if i > -1 and i < len(forest) and j > -1 and j < len(forest[0]) and forest[i][j] != 0:
+                        if (i,j) not in seen.keys():
+                            if cur_mdist > mdistance((i, j), (dest_i, dest_j)):
+                                heappush(heap, (level, i, j))
+                                seen[(i,j)] = level
+                            else:
+                                heappush(heap, (level+1,i,j))
+                                seen[(i,j)] = level+1
+                        else:
+                            if cur_mdist > mdistance((i, j), (dest_i, dest_j)):
+                                alter = level
+                            else:
+                                alter = level+1
+                            if seen[(i,j)] > alter:
+                                    #remove (seen[cur_i-1][cur_j],cur_i-1,cur_j) from heap
+                                    rm_idx = heap.index((seen[(i,j)],i,j))
+                                    heap[-1], heap[rm_idx] = heap[rm_idx], heap[-1]
+                                    heap.pop()
+                                    heapify(heap)
+                                    heappush(heap, (alter, i, j))
+                                    seen[(i,j)] = alter                       
+                                            
+                if not heap:
+                    return -1
+                current = heappop(heap)
+            heap.clear()
+            steps += 2*(current[0])
+            current = (0, current[1], current[2])
+            seen.clear()
+        return steps
+            
+                
+##############################################################
+Lees Algorithm Implementation
+##############################################################
+
+
     def cutOffTree(self, forest: List[List[int]]) -> int:
         #Lees Algorithm Implementation for Maze Routing
         sizes = []
