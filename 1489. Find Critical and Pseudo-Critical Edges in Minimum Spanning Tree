@@ -1,0 +1,113 @@
+class Solution:
+    def findCriticalAndPseudoCriticalEdges(self, n: int, edges: List[List[int]]) -> List[List[int]]:
+        ########edge cases####################
+        if n == 2:
+            return [[0],[]]
+        ########sorted edges#####################
+        e = [(w, idx, a, b) for idx, (a, b, w) in enumerate(edges)]
+        e.sort()
+        ########adj dict#################
+        adj = defaultdict(list)
+        for ge_w, ge_idx, ge_a, ge_b in e:
+                adj[ge_a].append((ge_idx, ge_b, ge_w))
+                adj[ge_b].append((ge_idx, ge_a, ge_w))            
+        ########disjoint set###############
+        parent = [(-1,1) for i in range(n)]
+        def find(c)->int:
+            if parent[c][0] == -1:
+                return c
+            new_root  = find(parent[c][0])
+            parent[c] = (new_root, parent[c][1])
+            return new_root
+
+        def union(a, b):
+            root_a, root_b  = find(a), find(b)
+            a_rank, b_rank  = parent[root_a][1], parent[root_b][1]
+            if a_rank >= b_rank:
+                parent[root_b] = (root_a, b_rank)
+                parent[root_a] = (-1, a_rank + b_rank)
+            else:
+                parent[root_a] = (root_b, a_rank)
+                parent[root_b] = (-1, b_rank + a_rank)
+        #########dfs cycle search#######################
+        def dfs(a, b, dfs_weight, adj, seen = -1)-> (bool, list):
+            for n_idx, neighbor, n_weight in adj[a]:
+                #dont do previous or go to unseen nodes
+                if neighbor == seen or mst[n_idx] != 1:
+                    continue
+                if neighbor == b:
+                    if n_weight == dfs_weight:
+                        return True, [n_idx]     
+                    return True, []
+                    
+                found, dfs_l = dfs(neighbor, b, dfs_weight, adj, a)
+                if found:
+                    if n_weight == dfs_weight:
+                        if dfs_l is None:
+                            return True, [n_idx]
+                        else:
+                            dfs_l.append(n_idx)
+                    return True, dfs_l
+            return False, []                  
+        #########################################
+        ##append first two edges to mst and union their nodes
+        mst, mst_count, e_idx = [0 for i in range(len(edges))], 0 , 0
+        union(e[e_idx][2], e[e_idx][3])
+        mst[e[e_idx][1]] = 1
+        mst_count +=1
+        e_idx+=1
+        union(e[e_idx][2], e[e_idx][3])
+        mst[e[e_idx][1]] = 1
+        mst_count +=1
+        w = e[e_idx][0]
+        pseudo = set({})
+        in_pseudo = defaultdict(int)
+        #Repeat for nodes of current weight w
+        e_idx+=1
+        final = False
+        while mst_count < n-1: 
+            t_idx = e_idx
+            #remove all nodes in current weight that are cycles by themselves
+            #dont do first weight as pre-adding edges above could cause issues
+            while t_idx < len(edges) and e[t_idx][0] == w and w != e[1][0]:
+                tfs_w, tfs_idx, t_a, t_b = e[t_idx]
+                if find(t_a) == find(t_b):
+                    e[t_idx] = (tfs_w, tfs_idx, -2, -2)
+                    mst[tfs_idx] = -2
+                t_idx+=1
+            while e_idx < len(edges) and e[e_idx][0] == w:
+                if mst_count >= n-1:
+                    final = True
+                dfs_w, dfs_idx, a, b = e[e_idx]
+                #print(dfs_w, dfs_idx, a, b)
+                #edge was removed
+                if a == -2:
+                    e_idx+=1
+                    continue
+                if find(a) == find(b): 
+                    #cycle detected
+                    y, dfs_list = dfs(a, b, dfs_w, adj)
+                    pseudo = pseudo.union(set(dfs_list))
+                    pseudo.add(dfs_idx)
+                    in_pseudo[dfs_idx] = 1
+                    for dfs_list_idx in  dfs_list:
+                        in_pseudo[dfs_list_idx] = 1
+                    mst[dfs_idx] = -1
+                elif not final: 
+                    union(a,b)
+                    mst[e[e_idx][1]] = 1
+                    mst_count +=1
+                e_idx+=1
+            if e_idx >= len(edges):
+                break
+            w = e[e_idx][0]
+  
+        # for remaining edges with current weight, we must check for cycles
+        mst_ret = []
+        for mst_idx, mst_val in enumerate(mst):
+            if mst[mst_idx] == 1:
+                if in_pseudo[mst_idx] == 0:
+                    mst_ret.append(mst_idx)
+        return [mst_ret, list(pseudo)]
+                
+        
