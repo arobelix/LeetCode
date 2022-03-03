@@ -1,0 +1,116 @@
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
+class Solution {
+//This solution will perform an in place merge sort of a linked list.
+/*This involves splitting the entire list into sublists of increasing size, progressing from 2, to 4, to 8, to 16 and so on. Each sublist is then divided into 2 sublists which are separated from eachother and the rest of the list. They are merged, which is O(n) time complexity, and the start and end of the final list is maintained. The start of the list is connected to the end of the previous list, the end of the list is saved as the start for the next list. End cases, which could have less then the expected size, are handled.
+The total size of the list is n, then iteration 1 will sort the list in pairs of 2, iteration 2 in groups of 4, and so on. If the group size is greater then n, there is no need to complete that iteration, and the process is complete.*/
+public:
+    //maintains the end of the last sublist
+    //first value will be dummy header
+    ListNode *tail;
+    //maintains the starting value of the next sublist within an iteration
+    ListNode *nextSubList;
+    
+    ListNode* sortList(ListNode* head) {
+        //edge cases of 1 or no nodes in list
+        if (!head || !head -> next)
+            return head;
+        
+        ListNode dummyHead(0);
+        ListNode * start = head;
+        int length = getLength(head);
+        //proceed through the iterations, doubling size of sublist each time
+        for (int size = 1; size < length; size = size * 2) {
+            //in each iteration, the first tail is the dummy header
+            //this way the first iteration will always be pointed to by the dummy header even after sorting 
+            tail = &dummyHead;
+            while(start) {
+                //start represents the next starting position. If it is null, we are done. If it points to a null value, there is                   only one value in the next sublist, and it is thus already sorted.
+                if (!start->next) {
+                    tail->next = start;
+                    break;
+                }
+                //Get the middle point of the current sublist. Also, separate this sublist from the rest of the list, so no nodes                   point to the sublist, and the sublist does not point to any nodes outside of the sublist
+                ListNode * mid = split(start, size);
+                //merge the two lists. This is equivalent to merging to distinct lists, because in split(), these lists were                            completely separated.
+                merge(start, mid);
+                //nextSublist was updated in split(). It is used to set start here
+                start = nextSubList;
+            }
+            //start will always begin as the first value in the list
+            start = dummyHead.next;
+        }
+        return dummyHead.next;
+    }
+    
+    ListNode * split(ListNode * start, int size) {
+        //we already checked if start->next is null before.
+        ListNode * midPrev = start;
+        ListNode * end = start->next;
+        
+        //for loop checks if midPrev has shifted less then size and 
+        //while both mid and end->next are not null (list length is less then size)
+        for (int index = 1; index < size && (midPrev->next || end->next); index++) {
+            if (end->next) {
+                //keep doubling end. This will mean end finds the end faster then mid.
+                //It will stop once index hits size, so at the an offset of 2*size from start
+                //but it can also stop before that if the sublist is short
+                end = end->next->next ? end->next->next : end->next;
+            }
+            if (midPrev->next) {
+                //midPrev will find the node right before the mid value. If there are 8 nodes in a sublist, the 5th node is the mid                 value, as this is the start of the next sorted list. midPrev should then point to the 4th node. If size is 8 and                    there are only 3 nodes, midPrev will have a next value of null before the for loop completes.
+                midPrev = midPrev->next;
+            }
+        }
+        
+        ListNode * mid = midPrev->next;
+        //split sublist from rest of list
+        midPrev->next = nullptr;
+        nextSubList = end->next;
+        end->next = nullptr;  
+        return mid;
+    }
+    
+    void merge(ListNode* h1, ListNode* h2) {
+        ListNode dummyHead(0);
+        ListNode * newTail = &dummyHead;
+        
+        //maintain a newTail which is the current tail of the sorted list. Going through each value of list starting at h1 and h2,          append this to newTail, and set newTail to the new tail of the sorted list. The first node is maintained in dummyHead
+        while (h1 && h2) {
+            if (h1->val <= h2->val) {
+                newTail->next = h1;
+                h1 = h1->next;
+                newTail = newTail->next;
+            } else {
+                newTail->next = h2;
+                h2 = h2->next;
+                newTail = newTail->next;
+            }            
+        }
+        //One list will always have remaining values, because only one list can become null first. The list with remaining items  will be in sorted order. Find the list which has remaining values, and assign it to newTail->next. Then, iterate through the remaining items to find the final item. This value will be the end of either h1 or h2 list, and thus will not point to anyhting. Save it as the tail value for the next sublist, and continue. IF that sublist exists, it will be attached to the tail. If it does not exists, then the sort is complete.
+        newTail->next = h1 ? h1 : h2;
+        while (newTail->next) {
+            newTail = newTail->next;
+        }
+        tail->next = dummyHead.next;
+        tail = newTail;        
+    }
+    
+    //gets length of list
+    int getLength(ListNode * head1) {
+        int n = 1;
+        while (head1->next) {
+            n++;
+            head1 = head1->next;
+        }
+        return n;
+    }
+};
